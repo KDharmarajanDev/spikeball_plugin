@@ -9,7 +9,7 @@ public class SpikeBallMain extends JavaPlugin {
 
     private CommandHandler commandHandler = new CommandHandler();
     private static SpikeBallMain plugin;
-    private static String pluginInformationString = "&";
+    private static String pluginInformationString = "&2[&6Spike Ball&2] &8» &9";
 
     @Override
     public void onEnable(){
@@ -34,8 +34,8 @@ public class SpikeBallMain extends JavaPlugin {
         return plugin;
     }
 
-    public static void sendPluginMessage(Player player){
-        player.sendMessage("");
+    public static void sendPluginMessage(Player player, String message){
+        player.sendMessage(pluginInformationString + message);
     }
 
 }

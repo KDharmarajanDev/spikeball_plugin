@@ -19,4 +19,7 @@ public class SpikeBallNet {
         return spikeBallNet.getLocation();
     }
 
+    public Block toBlock(){
+        return spikeBallNet;
+    }
 }

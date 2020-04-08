@@ -1,5 +1,6 @@
 package Mathematician.spikeball.gamemechanics;
 
+import Mathematician.spikeball.SpikeBallMain;
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
 import org.bukkit.block.Block;
@@ -17,23 +18,26 @@ public class SpikeBallGame {
     private ArrayList<Player> redTeam;
     private ArrayList<Player> blueTeam;
 
-    private boolean ifPracticeGame = false;
-    private boolean ifStarted = false;
+    private enum GameStates {
+        PRACTICE, PRE_MATCH, MATCH
+    }
+
+    private GameStates currentState = GameStates.PRE_MATCH;
 
     public SpikeBallGame(Block spikeBallNet, ArrayList<Player> players){
-        if(players.size() < 1){
-            return;
+        redTeam = new ArrayList<>();
+        blueTeam = new ArrayList<>();
+        if(!(players.size() < 1)){
+            for(Player p : players){
+                addPlayer(p);
+            }
+            spikeBall = new SpikeBall(players.get(0).getWorld());
+            this.spikeBallNet = new SpikeBallNet(spikeBallNet);
         }
-        if(players.size() == 1){
-            ifPracticeGame = true;
-            redTeam.add(players.get(0));
-        }
-        spikeBall = new SpikeBall(players.get(0).getWorld());
-        this.spikeBallNet = new SpikeBallNet(spikeBallNet);
     }
 
     public void startGame(){
-        ifStarted = true;
+        currentState = GameStates.MATCH;
         Random random = new Random();
         int randomInt = random.nextInt(redTeam.size());
         if(redTeam.size() >= 1){
@@ -48,9 +52,11 @@ public class SpikeBallGame {
     }
 
     public void removePlayer(Player player){
-        if(ifStarted){
+        if(currentState == GameStates.MATCH){
+            messageAllPlayersInGame("Because " + player.getDisplayName() + " left the game, the game is cancelled!");
             SpikeBallGameHandler.removeGame(this);
         } else {
+            messageAllPlayersInGame(player.getDisplayName() + " left the game!");
             redTeam.remove(player);
             blueTeam.remove(player);
         }
@@ -93,6 +99,15 @@ public class SpikeBallGame {
             return true;
         }
         return false;
+    }
+
+    public void messageAllPlayersInGame(String message){
+        for(Player p : redTeam){
+            SpikeBallMain.sendPluginMessage(p, message);
+        }
+        for (Player c : blueTeam){
+            SpikeBallMain.sendPluginMessage(c, message);
+        }
     }
 
 }

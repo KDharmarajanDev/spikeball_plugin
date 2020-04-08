@@ -14,11 +14,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.metadata.FixedMetadataValue;
-
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class GameEventHandler implements Listener {
 
@@ -34,11 +29,14 @@ public class GameEventHandler implements Listener {
             toolIteMMeta.setDisplayName("&6Spike Ball Creator Tool");
             tool.setItemMeta(toolIteMMeta);
 
-            if(event.getItem().isSimilar(tool)){
-                SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet(block));
-            } else {
+            SpikeBallNet possibleNet = SpikeBallGameHandler.getSpikeBallNet(block);
+            if(possibleNet != null){
                 if(SpikeBallGameHandler.getGamePlayerIsIn(player) == null){
-
+                    SpikeBallGameHandler.addPlayerToGameFromNet(possibleNet, player);
+                }
+            } else {
+                if(event.getItem().isSimilar(tool)){
+                    SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet(block));
                 }
             }
         }
