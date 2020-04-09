@@ -21,6 +21,7 @@ public class SpikeBallGameHandler {
     }
 
     public static void removeGame(SpikeBallGame game){
+        game.clearSpikeBall();
         games.remove(game);
     }
 
@@ -73,6 +74,12 @@ public class SpikeBallGameHandler {
             ArrayList<Player> players = new ArrayList<>();
             players.add(player);
             games.add(new SpikeBallGame(spikeBallNet.toBlock(), players));
+        }
+    }
+
+    public static void updateAll(){
+        for(SpikeBallGame game : games){
+            game.update();
         }
     }
 }

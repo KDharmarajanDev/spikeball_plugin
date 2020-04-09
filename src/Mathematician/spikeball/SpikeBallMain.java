@@ -2,9 +2,11 @@ package Mathematician.spikeball;
 
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gamemechanics.GameEventHandler;
+import Mathematician.spikeball.gamemechanics.SpikeBallGameHandler;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitScheduler;
 
 public class SpikeBallMain extends JavaPlugin {
 
@@ -23,6 +25,14 @@ public class SpikeBallMain extends JavaPlugin {
 
         //Command Registering
         getCommand("spikeball").setExecutor(new CommandHandler());
+
+        BukkitScheduler scheduler = getServer().getScheduler();
+        scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+            @Override
+            public void run() {
+                SpikeBallGameHandler.updateAll();
+            }
+        }, 0L, 10L);
     }
 
     @Override
