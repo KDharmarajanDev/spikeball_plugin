@@ -2,6 +2,7 @@ package Mathematician.spikeball;
 
 import Mathematician.spikeball.gamemechanics.SpikeBallGame;
 import Mathematician.spikeball.gamemechanics.SpikeBallGameHandler;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -19,24 +20,28 @@ public class CommandHandler implements CommandExecutor {
                 Player player = (Player) sender;
                 if(args.length >= 1){
                     if(args[0].equalsIgnoreCase("setup")){
-                        player.sendMessage("Please select the Spike Ball net by clicking on it with the special tool.");
+                        SpikeBallMain.sendPluginMessage(player,"Please select the Spike Ball net by clicking on it with the special tool.");
                         ItemStack tool = new ItemStack(Material.STICK);
                         ItemMeta toolIteMMeta = tool.getItemMeta();
-                        toolIteMMeta.setDisplayName("&6Spike Ball Creator Tool");
+                        toolIteMMeta.setDisplayName(ChatColor.GOLD + "Spike Ball Creator Tool");
                         tool.setItemMeta(toolIteMMeta);
                         player.getInventory().setItemInMainHand(tool);
+                        return true;
                     } else if(args[0].equalsIgnoreCase("leave")){
-                        player.sendMessage("You have left!");
                         SpikeBallGame spikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
-                        spikeBallGame.removePlayer(player);
+                        if(spikeBallGame != null){
+                            spikeBallGame.removePlayer(player);
+                        } else {
+                            SpikeBallMain.sendPluginMessage(player,"You are not in a game!");
+                        }
+                        return true;
                     } else if(args[0].equalsIgnoreCase("start")){
                         SpikeBallGame playerGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
                         if(playerGame != null){
                             playerGame.startGame();
                         }
+                        return true;
                     }
-                } else {
-                    return false;
                 }
             }
         }

@@ -3,6 +3,7 @@ package Mathematician.spikeball.gamemechanics;
 import Mathematician.spikeball.SpikeBallMain;
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
+import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -37,18 +38,24 @@ public class SpikeBallGame {
     }
 
     public void startGame(){
-        currentState = GameStates.MATCH;
-        Random random = new Random();
-        int randomInt = random.nextInt(redTeam.size());
-        if(redTeam.size() >= 1){
+        if(numPlayers() == 4) {
+            currentState = GameStates.MATCH;
+            Random random = new Random();
+            int randomInt = random.nextInt(redTeam.size());
             spikeBall.giveToPlayer(redTeam.get(randomInt));
+        } else {
+            currentState = GameStates.PRACTICE;
+            if(redTeam.size() >= 1){
+                spikeBall.giveToPlayer(redTeam.get(0));
+            } else if(blueTeam.size() >= 1) {
+                spikeBall.giveToPlayer(blueTeam.get(0));
+            }
         }
     }
 
     public void serveSpikeBall(Player player, Vector direction){
         spikeBall.setPlaying(true);
-        spikeBall.removeSpikeBallFromPlayer(player);
-        spikeBall.setInitialVelocity(direction);
+        spikeBall.spawnInLocation(player.getLocation(), direction);
     }
 
     public void removePlayer(Player player){
@@ -60,6 +67,10 @@ public class SpikeBallGame {
             redTeam.remove(player);
             blueTeam.remove(player);
         }
+    }
+
+    public void changeSpikeBallVelocity(Vector velocity){
+        spikeBall.setInitialVelocity(velocity);
     }
 
     public boolean ifPlayerIsInGame(Player player){
@@ -82,18 +93,24 @@ public class SpikeBallGame {
     }
 
     public boolean addPlayer(Player p){
-        if(redTeam.size() + blueTeam.size() <= 3){
-            if(redTeam.size() == 2){
-                blueTeam.add(p);
-            } else if(blueTeam.size() == 2){
-                redTeam.add(p);
-            } else {
-                Random random = new Random();
-                int randomNumber = random.nextInt(2);
-                if(randomNumber == 0){
-                    redTeam.add(p);
-                } else {
+        if(!ifPlayerIsInGame(p)) {
+            if (redTeam.size() + blueTeam.size() <= 3) {
+                if (redTeam.size() == 2) {
                     blueTeam.add(p);
+                    SpikeBallMain.sendPluginMessage(p, "You have joined a game with this Spike Ball Net on the " + ChatColor.BLUE + "Blue Team " + ChatColor.GOLD + ".");
+                } else if (blueTeam.size() == 2) {
+                    redTeam.add(p);
+                    SpikeBallMain.sendPluginMessage(p, "You have joined a game with this Spike Ball Net on the " + ChatColor.RED + "Red Team " + ChatColor.GOLD + ".");
+                } else {
+                    Random random = new Random();
+                    int randomNumber = random.nextInt(2);
+                    if (randomNumber == 0) {
+                        redTeam.add(p);
+                        SpikeBallMain.sendPluginMessage(p, "You have joined a game with this Spike Ball Net on the " + ChatColor.RED + "Red Team " + ChatColor.GOLD + ".");
+                    } else {
+                        blueTeam.add(p);
+                        SpikeBallMain.sendPluginMessage(p, "You have joined a game with this Spike Ball Net on the " + ChatColor.BLUE + "Blue Team " + ChatColor.GOLD + ".");
+                    }
                 }
             }
             return true;
@@ -108,6 +125,10 @@ public class SpikeBallGame {
         for (Player c : blueTeam){
             SpikeBallMain.sendPluginMessage(c, message);
         }
+    }
+
+    public int numPlayers(){
+        return redTeam.size() + blueTeam.size();
     }
 
 }

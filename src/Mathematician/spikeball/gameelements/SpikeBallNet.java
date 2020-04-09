@@ -22,4 +22,8 @@ public class SpikeBallNet {
     public Block toBlock(){
         return spikeBallNet;
     }
+
+    public boolean equals(SpikeBallNet net){
+        return net.toBlock().equals(spikeBallNet);
+    }
 }

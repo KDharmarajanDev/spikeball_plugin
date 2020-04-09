@@ -57,14 +57,22 @@ public class SpikeBallGameHandler {
 
 
     public static void addPlayerToGameFromNet(SpikeBallNet spikeBallNet, Player player){
+        boolean ifSpikeBallNetHasAGame = false;
         for(SpikeBallGame game : games){
             if(game.getSpikeBallNet().equals(spikeBallNet)){
                 if(!game.addPlayer(player)){
                     ArrayList<Player> players = new ArrayList<>();
+                    players.add(player);
                     addGame(new SpikeBallGame(spikeBallNet.toBlock(), players));
                 }
+                ifSpikeBallNetHasAGame = true;
                 break;
             }
+        }
+        if(!ifSpikeBallNetHasAGame){
+            ArrayList<Player> players = new ArrayList<>();
+            players.add(player);
+            games.add(new SpikeBallGame(spikeBallNet.toBlock(), players));
         }
     }
 }
