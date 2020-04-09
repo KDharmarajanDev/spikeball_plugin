@@ -38,7 +38,13 @@ public class CommandHandler implements CommandExecutor {
                     } else if(args[0].equalsIgnoreCase("start")){
                         SpikeBallGame playerGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
                         if(playerGame != null){
-                            playerGame.startGame();
+                            if(!playerGame.isInProgress()){
+                                playerGame.startGame();
+                            } else {
+                                SpikeBallMain.sendPluginMessage(player,"The game has already started!");
+                            }
+                        } else {
+                            SpikeBallMain.sendPluginMessage(player,"You are not in a game!");
                         }
                         return true;
                     }

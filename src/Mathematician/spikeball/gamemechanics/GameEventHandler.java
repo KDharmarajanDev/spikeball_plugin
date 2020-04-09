@@ -6,6 +6,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.event.EventHandler;
@@ -15,6 +16,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -80,7 +82,7 @@ public class GameEventHandler implements Listener {
                 SpikeBallGame playerSpikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
                 if(playerSpikeBallGame != null){
                     event.getItem().setAmount(0);
-                    playerSpikeBallGame.serveSpikeBall(player, playerLocation.getDirection().normalize().multiply(5));
+                    playerSpikeBallGame.serveSpikeBall(player, playerLocation.getDirection());
                 }
             }
         }
@@ -105,6 +107,15 @@ public class GameEventHandler implements Listener {
             if(slime.getCustomName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")){
                 event.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void spikeBallDeathEvent(final EntityDeathEvent event) {
+        Entity deadEntity = event.getEntity();
+        if(deadEntity !=null && deadEntity instanceof Slime && deadEntity.getCustomName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")) {
+            event.getDrops().clear();
+            event.setDroppedExp(0);
         }
     }
 }
