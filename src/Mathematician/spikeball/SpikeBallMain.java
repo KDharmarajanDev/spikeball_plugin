@@ -2,6 +2,7 @@ package Mathematician.spikeball;
 
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gamemechanics.GameEventHandler;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -9,7 +10,7 @@ public class SpikeBallMain extends JavaPlugin {
 
     private CommandHandler commandHandler = new CommandHandler();
     private static SpikeBallMain plugin;
-    private static String pluginInformationString = "&";
+    private static String pluginInformationString = ChatColor.DARK_GREEN + "[" + ChatColor.GOLD + "Spike Ball" + ChatColor.DARK_GREEN + "]" +ChatColor.DARK_GRAY +" » " + ChatColor.GOLD;
 
     @Override
     public void onEnable(){
@@ -24,7 +25,6 @@ public class SpikeBallMain extends JavaPlugin {
         getCommand("spikeball").setExecutor(new CommandHandler());
     }
 
-
     @Override
     public void onDisable(){
         //Fired when the server stops and disables all plugins
@@ -34,8 +34,8 @@ public class SpikeBallMain extends JavaPlugin {
         return plugin;
     }
 
-    public static void sendPluginMessage(Player player){
-        player.sendMessage("");
+    public static void sendPluginMessage(Player player, String message){
+        player.sendMessage(pluginInformationString + message);
     }
 
 }

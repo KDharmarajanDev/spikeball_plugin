@@ -1,12 +1,10 @@
 package Mathematician.spikeball.gameelements;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Slime;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.util.Vector;
@@ -15,6 +13,8 @@ public class SpikeBall {
 
     private Slime ball;
     private World world;
+
+    private static ItemStack slimeHead = new ItemStack(Material.PLAYER_HEAD, 1);
 
     private boolean ifPlaying = false;
 
@@ -35,34 +35,21 @@ public class SpikeBall {
     }
 
     public void giveToPlayer(Player target){
-        ItemStack slimeHead = new ItemStack(Material.PLAYER_HEAD, 1);
-        SkullMeta slimeHeadMeta = (SkullMeta) slimeHead.getItemMeta();
-
-        slimeHeadMeta.setDisplayName("§2Spike Ball");
-        slimeHeadMeta.setOwner("MHF_Slime");
-
-        slimeHead.setItemMeta(slimeHeadMeta);
-
-        target.getInventory().setItemInMainHand(slimeHead);
-
+        target.getInventory().setItemInMainHand(getSpikeBallHead());
         ifPlaying = false;
-    }
-
-    public void removeSpikeBallFromPlayer(Player target){
-        target.getInventory().remove(Material.PLAYER_HEAD);
     }
 
     public void spawnInLocation(Location location){
         LivingEntity mob = (LivingEntity) world.spawnEntity(location, EntityType.SLIME);
         ball = (Slime) mob;
         ball.setSize(1);
-        ball.setCustomName("§2Spike Ball");
+        ball.setCustomName(ChatColor.GREEN + "Spike Ball");
 
         ball.setCanPickupItems(false);
         ball.setCustomNameVisible(true);
         ball.setInvulnerable(true);
         ball.setSilent(true);
-        ball.setAI(false);
+
         ball.setGravity(true);
 
         setPlaying(true);
@@ -72,7 +59,7 @@ public class SpikeBall {
         LivingEntity mob = (LivingEntity) world.spawnEntity(location, EntityType.SLIME);
         ball = (Slime) mob;
         ball.setSize(1);
-        ball.setCustomName("§2Spike Ball");
+        ball.setCustomName(ChatColor.GREEN + "Spike Ball");
 
         ball.setCanPickupItems(false);
         ball.setCustomNameVisible(true);
@@ -95,5 +82,15 @@ public class SpikeBall {
         if(ball != null){
             ball.setVelocity(initialVelocity);
         }
+    }
+
+    public static ItemStack getSpikeBallHead(){
+        SkullMeta slimeHeadMeta = (SkullMeta) slimeHead.getItemMeta();
+
+        slimeHeadMeta.setDisplayName(ChatColor.GREEN + "Spike Ball");
+        slimeHeadMeta.setOwner("MHF_Slime");
+
+        slimeHead.setItemMeta(slimeHeadMeta);
+        return slimeHead;
     }
 }
