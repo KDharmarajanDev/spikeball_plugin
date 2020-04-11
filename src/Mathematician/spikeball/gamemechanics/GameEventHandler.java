@@ -94,7 +94,11 @@ public class GameEventHandler implements Listener {
             Player player = (Player) event.getDamager();
             SpikeBallGame spikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
             if(spikeBallGame != null){
-                spikeBallGame.changeSpikeBallVelocity(player.getLocation().getDirection());
+                spikeBallGame.addVelocityToSpikeBall(player.getLocation().getDirection().normalize().multiply(1.5));
+                spikeBallGame.addHit();
+                if(spikeBallGame.getHitCount() > 3){
+                    spikeBallGame.updateScore();
+                }
                 event.setCancelled(true);
             }
         }

@@ -11,8 +11,9 @@ import org.bukkit.scheduler.BukkitScheduler;
 public class SpikeBallMain extends JavaPlugin {
 
     private CommandHandler commandHandler = new CommandHandler();
-    private static SpikeBallMain plugin;
+    public static JavaPlugin plugin;
     private static String pluginInformationString = ChatColor.DARK_GREEN + "[" + ChatColor.GOLD + "Spike Ball" + ChatColor.DARK_GREEN + "]" +ChatColor.DARK_GRAY +" » " + ChatColor.GOLD;
+    public static BukkitScheduler scheduler;
 
     @Override
     public void onEnable(){
@@ -26,22 +27,19 @@ public class SpikeBallMain extends JavaPlugin {
         //Command Registering
         getCommand("spikeball").setExecutor(new CommandHandler());
 
-        BukkitScheduler scheduler = getServer().getScheduler();
+        scheduler = getServer().getScheduler();
+        plugin = this;
         scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {
                 SpikeBallGameHandler.updateAll();
             }
-        }, 0L, 10L);
+        }, 0L, 5L);
     }
 
     @Override
     public void onDisable(){
         //Fired when the server stops and disables all plugins
-    }
-
-    public static SpikeBallMain getPlugin(){
-        return plugin;
     }
 
     public static void sendPluginMessage(Player player, String message){

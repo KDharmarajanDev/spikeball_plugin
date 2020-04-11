@@ -1,5 +1,5 @@
 name: SpikeBall
-version: 0.2
+version: 0.3
 author: Mathematician/ Kartik Dharmarajan
 main: Mathematician.spikeball.SpikeBallMain
 api-version: 1.15

@@ -47,6 +47,24 @@ public class CommandHandler implements CommandExecutor {
                             SpikeBallMain.sendPluginMessage(player,"You are not in a game!");
                         }
                         return true;
+                    } else if(args[0].equalsIgnoreCase("visualize")){
+                        SpikeBallGame playerGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
+                        if(playerGame != null){
+                            playerGame.visualizeSpikeBallNetBoundingBox();
+                            SpikeBallMain.sendPluginMessage(player, "Successfully visualizing.");
+                        } else {
+                            SpikeBallMain.sendPluginMessage(player, "Join a game in order to visualize.");
+                        }
+                        return true;
+                    } else if(args[0].equalsIgnoreCase("cancel") && args.length >= 2 && args[1].equalsIgnoreCase("visualization")){
+                        SpikeBallGame playerGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
+                        if(playerGame != null){
+                            playerGame.cancelVisualization();
+                            SpikeBallMain.sendPluginMessage(player, "Successfully cancelled visualization.");
+                        } else {
+                            SpikeBallMain.sendPluginMessage(player, "Join a game to cancel visualization.");
+                        }
+                        return true;
                     }
                 }
             }
