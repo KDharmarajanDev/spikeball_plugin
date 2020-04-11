@@ -3,13 +3,12 @@ package Mathematician.spikeball.gamemechanics;
 import Mathematician.spikeball.SpikeBallMain;
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.*;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
@@ -37,8 +36,14 @@ public class SpikeBallGame {
     private boolean redLastHit = true;
     private Player lastServedPlayer;
     private int hitCount = 0;
+    private int bounceCount = 0;
 
-    private final double SPIKE_BALL_GROUND_TOUCHING_TOLERANCE = 0.10;
+    private final double SPIKE_BALL_GROUND_TOUCHING_TOLERANCE = 0.40;
+
+    private int targetScore = 11;
+    private int mustWinBy = 2;
+
+    private int schedulerID = 0;
 
     public SpikeBallGame(Block spikeBallNet, ArrayList<Player> players){
         redTeam = new ArrayList<>();
@@ -84,14 +89,13 @@ public class SpikeBallGame {
     public void serveSpikeBall(Player player, Vector direction){
         spikeBall.setPlaying(true);
         lastServedPlayer = player;
-        spikeBall.spawnInLocation(player.getLocation().add(player.getLocation().getDirection().normalize()).add(0,1,0), direction.normalize().multiply(4));
+        spikeBall.spawnInLocation(player.getLocation().add(player.getLocation().getDirection().normalize()).add(0,1.5,0), direction.normalize());
     }
 
     public void removePlayer(Player player){
         if(currentState == GameStates.MATCH || numPlayers() - 1 <= 0){
             messageAllPlayersInGame("Because " + player.getDisplayName() + " left the game, the game is cancelled!");
-            removeAllScoreboards();
-            SpikeBallGameHandler.removeGame(this);
+            terminateGame();
         } else {
             messageAllPlayersInGame(player.getDisplayName() + " left the game!");
             redTeam.remove(player);
@@ -177,8 +181,14 @@ public class SpikeBallGame {
         switch (currentState){
             case MATCH:
                 if(spikeBall.getEntity() != null && spikeBall.isPlaying()) {
-                    if (spikeBall.getEntity().getLocation().add(0, -SPIKE_BALL_GROUND_TOUCHING_TOLERANCE, 0).getBlock().equals(spikeBallNet.toBlock())) {
-                        spikeBall.setVelocity(new Vector(spikeBall.getEntity().getVelocity().getX(), -1 * spikeBall.getEntity().getVelocity().getY(), spikeBall.getEntity().getVelocity().getZ()));
+                    if (ifSpikeBallHitNet()) {
+                        spikeBall.setVelocity(new Vector(spikeBall.getEntity().getVelocity().getX(), Math.abs(spikeBall.getEntity().getVelocity().getY()), spikeBall.getEntity().getVelocity().getZ()));
+                        redLastHit = !redLastHit;
+                        bounceCount++;
+                        if(bounceCount >= 2){
+                            bounceCount = 0;
+                            updateScore();
+                        }
                     } else if (!spikeBall.getEntity().getLocation().add(0, -SPIKE_BALL_GROUND_TOUCHING_TOLERANCE, 0).getBlock().getType().equals(Material.AIR)) {
                         updateScore();
                     }
@@ -186,8 +196,15 @@ public class SpikeBallGame {
                 break;
             case PRACTICE:
                 if(spikeBall.getEntity() != null && spikeBall.isPlaying()) {
-                    if (spikeBall.getEntity().getLocation().add(0, -SPIKE_BALL_GROUND_TOUCHING_TOLERANCE, 0).getBlock().equals(spikeBallNet.toBlock())) {
-                        spikeBall.setVelocity(new Vector(spikeBall.getEntity().getVelocity().getX(), -1 * spikeBall.getEntity().getVelocity().getY(), spikeBall.getEntity().getVelocity().getZ()));
+                    if (ifSpikeBallHitNet()) {
+                        spikeBall.setVelocity(new Vector(spikeBall.getEntity().getVelocity().getX(), Math.abs(spikeBall.getEntity().getVelocity().getY()), spikeBall.getEntity().getVelocity().getZ()));
+                        redLastHit = !redLastHit;
+                        messageAllPlayersInGame("Hit!");
+                        bounceCount++;
+                        if(bounceCount >= 2){
+                            bounceCount = 0;
+                            updateScore();
+                        }
                     } else if (!spikeBall.getEntity().getLocation().add(0, -SPIKE_BALL_GROUND_TOUCHING_TOLERANCE, 0).getBlock().getType().equals(Material.AIR)) {
                         updateScore();
                     }
@@ -200,7 +217,7 @@ public class SpikeBallGame {
         spikeBall.removeSpikeBallFromWorld();
         for(Player p : redTeam){
             for(ItemStack itemStack : p.getInventory().getContents()){
-                if(itemStack.getItemMeta().getDisplayName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")){
+                if(itemStack != null && itemStack.getItemMeta() != null & itemStack.getItemMeta().getDisplayName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")){
                     itemStack.setAmount(0);
                     break;
                 }
@@ -208,7 +225,7 @@ public class SpikeBallGame {
         }
         for(Player c : blueTeam){
             for(ItemStack itemStack : c.getInventory().getContents()){
-                if(itemStack.getItemMeta().getDisplayName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")){
+                if(itemStack != null && itemStack.getItemMeta() != null & itemStack.getItemMeta().getDisplayName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")){
                     itemStack.setAmount(0);
                     break;
                 }
@@ -232,12 +249,15 @@ public class SpikeBallGame {
                 Random random = new Random();
                 int randomInt = random.nextInt(blueTeam.size());
                 spikeBall.giveToPlayer(blueTeam.get(randomInt));
+                redLastHit = false;
             } else if(lastServedPlayer != null){
                 spikeBall.giveToPlayer(lastServedPlayer);
+                redLastHit = false;
             } else if(redTeam.size() > 0){
                 Random random = new Random();
                 int randomInt = random.nextInt(redTeam.size());
                 spikeBall.giveToPlayer(redTeam.get(randomInt));
+                redLastHit = true;
             }
         } else {
             Score redScore = scoreObjective.getScore(ChatColor.DARK_RED + "Red Team:");
@@ -246,15 +266,91 @@ public class SpikeBallGame {
                 Random random = new Random();
                 int randomInt = random.nextInt(redTeam.size());
                 spikeBall.giveToPlayer(redTeam.get(randomInt));
+                redLastHit = true;
             } else if(lastServedPlayer != null){
                 spikeBall.giveToPlayer(lastServedPlayer);
+                redLastHit = true;
             } else if(blueTeam.size() > 0){
                 Random random = new Random();
                 int randomInt = random.nextInt(blueTeam.size());
                 spikeBall.giveToPlayer(blueTeam.get(randomInt));
+                redLastHit = false;
             }
         }
+        hitCount = 0;
         spikeBall.removeSpikeBallFromWorld();
+        if(teamWon()){
+            Score redScore = scoreObjective.getScore(ChatColor.DARK_RED + "Red Team:");
+            Score blueScore = scoreObjective.getScore(ChatColor.DARK_BLUE + "Blue Team:");
+            String winningTeam = ChatColor.RED + "Red";
+            if(blueScore.getScore() > redScore.getScore()){
+                winningTeam = ChatColor.BLUE + "Blue";
+            }
+            messageAllPlayersInGame(winningTeam + " team won! Thanks for playing!");
+            terminateGame();
+        }
     }
+
+    public boolean ifSpikeBallHitNet(){
+        if(getNetDetectionBoundingBox().overlaps(spikeBall.getEntity().getBoundingBox())){
+            return true;
+        }
+        return false;
+    }
+
+    public boolean teamWon(){
+        Score redScore = scoreObjective.getScore(ChatColor.DARK_RED + "Red Team:");
+        Score blueScore = scoreObjective.getScore(ChatColor.DARK_BLUE + "Blue Team:");
+        return (redScore.getScore() >= targetScore || blueScore.getScore() >= targetScore) && (blueScore.getScore() >= redScore.getScore() + mustWinBy || redScore.getScore() >= blueScore.getScore() + mustWinBy);
+    }
+
+    public void addHit(){
+        hitCount++;
+    }
+
+    public int getHitCount(){
+        return hitCount;
+    }
+
+    public void addVelocityToSpikeBall(Vector velocity){
+        if(spikeBall.getEntity() != null){
+            spikeBall.getEntity().setVelocity(spikeBall.getEntity().getVelocity().add(velocity));
+        }
+    }
+
+    public void cancelVisualization(){
+        SpikeBallMain.scheduler.cancelTask(schedulerID);
+    }
+
+    public void visualizeSpikeBallNetBoundingBox(){
+        visualizeBoundingBox(getNetDetectionBoundingBox(),spikeBallNet.toBlock().getWorld());
+    }
+    public void visualizeBoundingBox(BoundingBox boundingBox, World world){
+        schedulerID = SpikeBallMain.scheduler.scheduleSyncRepeatingTask(SpikeBallMain.plugin, new Runnable() {
+            @Override
+            public void run() {
+                    world.playEffect(new Location(world, boundingBox.getMaxX(), boundingBox.getMaxY(), boundingBox.getMaxZ()),Effect.SMOKE, 1);
+                    world.playEffect(new Location(world, boundingBox.getMaxX(), boundingBox.getMinY(), boundingBox.getMaxZ()),Effect.SMOKE, 1);
+                    world.playEffect(new Location(world, boundingBox.getMaxX(), boundingBox.getMaxY(), boundingBox.getMinZ()),Effect.SMOKE, 1);
+                    world.playEffect(new Location(world, boundingBox.getMaxX(), boundingBox.getMinY(), boundingBox.getMinZ()),Effect.SMOKE, 1);
+
+                    world.playEffect(new Location(world, boundingBox.getMinX(), boundingBox.getMaxY(), boundingBox.getMaxZ()),Effect.SMOKE, 1);
+                    world.playEffect(new Location(world, boundingBox.getMinX(), boundingBox.getMinY(), boundingBox.getMaxZ()),Effect.SMOKE, 1);
+                    world.playEffect(new Location(world, boundingBox.getMinX(), boundingBox.getMaxY(), boundingBox.getMinZ()),Effect.SMOKE, 1);
+                    world.playEffect(new Location(world, boundingBox.getMinX(), boundingBox.getMinY(), boundingBox.getMinZ()),Effect.SMOKE, 1);
+            }
+        },0,5);
+    }
+
+    public BoundingBox getNetDetectionBoundingBox(){
+        return spikeBallNet.toBlock().getBoundingBox().shift(0, 1, 0).expand(new Vector(0.25,0,0.25));
+    }
+
+    public void terminateGame(){
+        removeAllScoreboards();
+        clearSpikeBall();
+        SpikeBallGameHandler.removeGame(this);
+    }
+
 
 }
