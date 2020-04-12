@@ -11,8 +11,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
-import java.lang.reflect.Field;
-
 public class SpikeBall {
 
     private Slime ball;
@@ -39,7 +37,7 @@ public class SpikeBall {
     }
 
     public void giveToPlayer(Player target) {
-        target.getInventory().setItemInMainHand(getSpikeBallHead());
+        target.getInventory().setItem(1, getSpikeBallHead());
         ifPlaying = false;
     }
 

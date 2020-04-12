@@ -18,9 +18,14 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.Vector;
 
 public class GameEventHandler implements Listener {
 
@@ -50,6 +55,14 @@ public class GameEventHandler implements Listener {
                 if(event.getItem() != null && event.getItem().isSimilar(tool)){
                     SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet(block));
                     SpikeBallMain.sendPluginMessage(player, "This is now a valid Spike Ball Net.");
+                }
+            }
+        } else if(event.getAction().equals(Action.RIGHT_CLICK_BLOCK) || event.getAction().equals(Action.RIGHT_CLICK_AIR)){
+            SpikeBallGame playerSpikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
+            if(playerSpikeBallGame != null && !playerSpikeBallGame.isInProgress()){
+                ItemStack item = event.getItem();
+                if(item.getType().equals(Material.RED_CONCRETE) || item.getType().equals(Material.BLUE_CONCRETE)){
+                    playerSpikeBallGame.switchTeams(player,item.getType().equals(Material.RED_CONCRETE));
                 }
             }
         }
@@ -94,10 +107,56 @@ public class GameEventHandler implements Listener {
             Player player = (Player) event.getDamager();
             SpikeBallGame spikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
             if(spikeBallGame != null){
-                spikeBallGame.addVelocityToSpikeBall(player.getLocation().getDirection().normalize().multiply(1.5));
-                spikeBallGame.addHit();
-                if(spikeBallGame.getHitCount() > 3){
-                    spikeBallGame.updateScore();
+                if(spikeBallGame.getHitType(player) != null){
+                    SpikeBallGame.HitType hitType = spikeBallGame.getHitType(player);
+                    Vector velocity = new Vector();
+                    Vector playerDirection = player.getLocation().getDirection();
+
+                    switch (hitType){
+                        case SPIKING:
+                            velocity = playerDirection.normalize().multiply(1.5);
+                            break;
+
+                        case UP:
+                            velocity = new Vector(playerDirection.getX(), 1.5, playerDirection.getY());
+                            break;
+                    }
+                    spikeBallGame.addVelocityToSpikeBall(velocity);
+                    spikeBallGame.addHit();
+                    if(spikeBallGame.getHitCount() > 3){
+                        spikeBallGame.updateScore();
+                    }
+                }
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void playerRightClickSlimeEvent(PlayerInteractEntityEvent event){
+        if(event.getRightClicked() instanceof Slime){
+            Player player = event.getPlayer();
+            SpikeBallGame spikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
+            if(spikeBallGame != null){
+                if(spikeBallGame.getHitType(player) != null){
+                    SpikeBallGame.HitType hitType = spikeBallGame.getHitType(player);
+                    Vector velocity = new Vector();
+                    Vector playerDirection = player.getLocation().getDirection();
+
+                    switch (hitType){
+                        case SPIKING:
+                            velocity = playerDirection.normalize().multiply(1.5);
+                            break;
+
+                        case UP:
+                            velocity = new Vector(playerDirection.getX(), 0.75, playerDirection.getY());
+                            break;
+                    }
+                    spikeBallGame.addVelocityToSpikeBall(velocity);
+                    spikeBallGame.addHit();
+                    if(spikeBallGame.getHitCount() > 3){
+                        spikeBallGame.updateScore();
+                    }
                 }
                 event.setCancelled(true);
             }
@@ -120,6 +179,32 @@ public class GameEventHandler implements Listener {
         if(deadEntity !=null && deadEntity instanceof Slime && deadEntity.getCustomName().equalsIgnoreCase(ChatColor.GREEN + "Spike Ball")) {
             event.getDrops().clear();
             event.setDroppedExp(0);
+        }
+    }
+
+    @EventHandler
+    public void inventoryMoveEvent(InventoryClickEvent event){
+        Player player = (Player) event.getWhoClicked();
+        if(player != null){
+            SpikeBallGame spikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
+            if(spikeBallGame != null){
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event){
+        Player player = event.getPlayer();
+        SpikeBallGame spikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
+        if(spikeBallGame != null){
+            if(spikeBallGame.isInProgress()){
+                event.setCancelled(true);
+                ItemStack droppedItem = event.getItemDrop().getItemStack();
+                if(droppedItem != null && (droppedItem.getType().equals(Material.RED_CONCRETE) || droppedItem.getType().equals(Material.BLUE_CONCRETE))){
+                    spikeBallGame.switchTypeOfHit(player, event.getItemDrop().getItemStack());
+                }
+            }
         }
     }
 }

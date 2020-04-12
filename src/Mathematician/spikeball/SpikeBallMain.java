@@ -34,7 +34,7 @@ public class SpikeBallMain extends JavaPlugin {
             public void run() {
                 SpikeBallGameHandler.updateAll();
             }
-        }, 0L, 5L);
+        }, 0L, 2L);
     }
 
     @Override
