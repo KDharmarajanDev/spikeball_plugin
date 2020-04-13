@@ -3,6 +3,8 @@ package Mathematician.spikeball.gamemechanics;
 import Mathematician.spikeball.SpikeBallMain;
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
+import Mathematician.spikeball.gamemechanics.powerups.Freeze;
+import Mathematician.spikeball.gamemechanics.powerups.PowerUp;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -28,6 +30,7 @@ public class SpikeBallGame {
     private ArrayList<Player> blueTeam;
 
     private HashMap<String, ItemStack[]> inventories;
+    private HashMap<String, PowerUp[]> powerUps;
 
     private Objective scoreObjective;
 
@@ -58,6 +61,8 @@ public class SpikeBallGame {
 
     private boolean shouldVisualize = false;
 
+    private PowerUp lastUsedPowerUp;
+
     public SpikeBallGame(Block spikeBallNet, ArrayList<Player> players){
         redTeam = new ArrayList<>();
         blueTeam = new ArrayList<>();
@@ -65,6 +70,7 @@ public class SpikeBallGame {
         inventories = new HashMap<>();
 
         hitTypeData = new HashMap<>();
+        powerUps = new HashMap<>();
 
         this.spikeBallNet = new SpikeBallNet(spikeBallNet);
         scoreboardManager = Bukkit.getScoreboardManager();
@@ -86,6 +92,10 @@ public class SpikeBallGame {
             }
             spikeBall = new SpikeBall(players.get(0).getWorld());
         }
+    }
+
+    public boolean getRedLastHit(){
+        return redLastHit;
     }
 
     public void startGame(){
@@ -123,6 +133,8 @@ public class SpikeBallGame {
             messageAllPlayersInGame(player.getDisplayName() + " left the game!");
             redTeam.remove(player);
             blueTeam.remove(player);
+            hitTypeData.remove(player.getDisplayName());
+            powerUps.remove(player.getDisplayName());
             player.setScoreboard(scoreboardManager.getNewScoreboard());
             giveBackPlayerInventory(player);
         }
@@ -175,6 +187,7 @@ public class SpikeBallGame {
                 }
                 savePlayerInventory(p);
                 setPlayerInventoryToGameMaterials(p, joinedRed);
+                setPowerUps(p);
                 if(joinedRed){
                     messageAllPlayersInGame(p.getDisplayName() + " has joined on the " + ChatColor.RED + "Red Team" + ChatColor.GOLD + "!");
                 } else {
@@ -231,6 +244,7 @@ public class SpikeBallGame {
                     if (ifSpikeBallHitNet()) {
                         spikeBall.setVelocity(new Vector(spikeBall.getEntity().getVelocity().getX(), Math.abs(spikeBall.getEntity().getVelocity().getY()), spikeBall.getEntity().getVelocity().getZ()));
                         redLastHit = !redLastHit;
+                        hitCount = 0;
                         bounceCount++;
                         if(bounceCount >= 2){
                             bounceCount = 0;
@@ -513,12 +527,14 @@ public class SpikeBallGame {
                 player.getInventory().setItem(0, blueConcrete);
             }
             hitTypeData.put(player.getDisplayName(), HitType.UP);
+            givePowerUpsToPlayer(player);
         }
     }
 
     public void giveBackPlayerInventory(Player player){
         if(inventories.containsKey(player.getDisplayName())){
             player.getInventory().setContents(inventories.get(player.getDisplayName()));
+            inventories.remove(player.getDisplayName());
         }
     }
 
@@ -607,5 +623,41 @@ public class SpikeBallGame {
         for(Player player : blueTeam){
             setPlayerInventoryToGameMaterials(player, false);
         }
+    }
+
+    public SpikeBall getSpikeBall(){
+        return spikeBall;
+    }
+
+    public void setPowerUps(Player player){
+        PowerUp[] powerUps = new PowerUp[1];
+        powerUps[0] = new Freeze(player, this);
+        this.powerUps.put(player.getDisplayName(),powerUps);
+    }
+
+    public PowerUp[] getPowerUps(Player player){
+        if(powerUps.containsKey(player.getDisplayName())) {
+            return powerUps.get(player.getDisplayName());
+        }
+        return null;
+    }
+
+    public void givePowerUpsToPlayer(Player player){
+        PowerUp[] powerUps = this.powerUps.get(player.getDisplayName());
+        for(int i = 0; i < powerUps.length; i++){
+            player.getInventory().setItem(i + 1, powerUps[i].getItemStack());
+        }
+    }
+
+    public void setLastUsedPowerUp(PowerUp powerUp){
+        lastUsedPowerUp = powerUp;
+    }
+
+    public boolean isIfPowerUpGoingOn(){
+        return lastUsedPowerUp != null;
+    }
+
+    public PowerUp getLastUsedPowerUp(){
+        return lastUsedPowerUp;
     }
 }
