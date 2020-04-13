@@ -37,7 +37,7 @@ public class SpikeBall {
     }
 
     public void giveToPlayer(Player target) {
-        target.getInventory().setItem(1, getSpikeBallHead());
+        target.getInventory().setItem(8, getSpikeBallHead());
         ifPlaying = false;
     }
 

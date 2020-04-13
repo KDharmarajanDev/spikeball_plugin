@@ -3,6 +3,7 @@ package Mathematician.spikeball;
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gamemechanics.GameEventHandler;
 import Mathematician.spikeball.gamemechanics.SpikeBallGameHandler;
+import Mathematician.spikeball.gamemechanics.powerups.CooldownHandler;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -33,6 +34,7 @@ public class SpikeBallMain extends JavaPlugin {
             @Override
             public void run() {
                 SpikeBallGameHandler.updateAll();
+                CooldownHandler.update();
             }
         }, 0L, 2L);
     }
