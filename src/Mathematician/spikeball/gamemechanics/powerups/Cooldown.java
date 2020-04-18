@@ -1,31 +1,27 @@
 package Mathematician.spikeball.gamemechanics.powerups;
 
-import org.bukkit.entity.Player;
+import java.util.function.Consumer;
 
 public class Cooldown {
 
-    private PowerUp powerUp;
     private long finishTime;
     private String tag;
+    private Consumer endActivationFunction;
 
-    public Cooldown(PowerUp powerUp, long coolDownTime, String tag){
-        this.powerUp = powerUp;
-        this.finishTime = System.currentTimeMillis() + coolDownTime;
+    public Cooldown (String tag, long coolDownTime){
         this.tag = tag;
+        this.finishTime = System.currentTimeMillis() + coolDownTime;
+        endActivationFunction = b -> getTag();
     }
 
-    public Cooldown(PowerUp powerUp, long coolDownTime){
-        this.powerUp = powerUp;
+    public Cooldown(String tag, long coolDownTime, Consumer endActivationFunction){
+        this.tag = tag;
         this.finishTime = System.currentTimeMillis() + coolDownTime;
-        this.tag = powerUp.getTag();
+        this.endActivationFunction = endActivationFunction;
     }
 
     public double getTimeRemainingInSeconds(){
         return (finishTime - System.currentTimeMillis()) / 1000.0;
-    }
-
-    public PowerUp getPowerUp(){
-        return powerUp;
     }
 
     public boolean isCompleted(){
@@ -34,5 +30,9 @@ public class Cooldown {
 
     public String getTag(){
         return tag;
+    }
+
+    public void activateFunction(Object o){
+        endActivationFunction.accept(o);
     }
 }

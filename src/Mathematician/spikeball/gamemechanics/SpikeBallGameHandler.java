@@ -40,7 +40,7 @@ public class SpikeBallGameHandler {
 
     public static boolean containsSpikeBallNet(SpikeBallNet spikeBallNet){
         for(SpikeBallNet net : nets){
-            if(net.equals(spikeBallNet)){
+            if(net.getSpikeBallNetLocation().getBlock().equals(spikeBallNet.getSpikeBallNetLocation().getBlock())){
                 return true;
             }
         }
@@ -81,5 +81,9 @@ public class SpikeBallGameHandler {
         for(SpikeBallGame game : games){
             game.update();
         }
+    }
+
+    public static int getNumNets(){
+        return nets.size();
     }
 }

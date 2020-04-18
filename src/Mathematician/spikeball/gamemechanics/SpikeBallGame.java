@@ -1,8 +1,11 @@
 package Mathematician.spikeball.gamemechanics;
 
 import Mathematician.spikeball.SpikeBallMain;
+import Mathematician.spikeball.advancedparticles.AdvancedParticleGenerator;
+import Mathematician.spikeball.advancedparticles.AdvancedParticleHandler;
 import Mathematician.spikeball.gameelements.SpikeBall;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
+import Mathematician.spikeball.gamemechanics.powerups.CooldownHandler;
 import Mathematician.spikeball.gamemechanics.powerups.Freeze;
 import Mathematician.spikeball.gamemechanics.powerups.PowerUp;
 import org.bukkit.*;
@@ -16,10 +19,7 @@ import org.bukkit.scoreboard.*;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class SpikeBallGame {
 
@@ -31,6 +31,7 @@ public class SpikeBallGame {
 
     private HashMap<String, ItemStack[]> inventories;
     private HashMap<String, PowerUp[]> powerUps;
+    private HashMap<String, Boolean> readyUp;
 
     private Objective scoreObjective;
 
@@ -54,7 +55,7 @@ public class SpikeBallGame {
     private int hitCount = 0;
     private int bounceCount = 0;
 
-    private final double SPIKE_BALL_GROUND_TOUCHING_TOLERANCE = 0.30;
+    private final double SPIKE_BALL_GROUND_TOUCHING_TOLERANCE = 0.25;
 
     private int targetScore = 11;
     private int mustWinBy = 2;
@@ -63,14 +64,20 @@ public class SpikeBallGame {
 
     private PowerUp lastUsedPowerUp;
 
+    private boolean isStartCancelled;
+
     public SpikeBallGame(Block spikeBallNet, ArrayList<Player> players){
         redTeam = new ArrayList<>();
         blueTeam = new ArrayList<>();
+
+        readyUp = new HashMap<>();
 
         inventories = new HashMap<>();
 
         hitTypeData = new HashMap<>();
         powerUps = new HashMap<>();
+
+        isStartCancelled = true;
 
         this.spikeBallNet = new SpikeBallNet(spikeBallNet);
         scoreboardManager = Bukkit.getScoreboardManager();
@@ -117,6 +124,7 @@ public class SpikeBallGame {
                 redLastHit = false;
             }
         }
+        removeAllPlayerAdvancedParticles();
     }
 
     public void serveSpikeBall(Player player, Vector direction){
@@ -129,6 +137,22 @@ public class SpikeBallGame {
         if(currentState == GameStates.MATCH || numPlayers() - 1 <= 0){
             messageAllPlayersInGame("Because " + player.getDisplayName() + " left the game, the game is cancelled!");
             terminateGame();
+        } else {
+            messageAllPlayersInGame(player.getDisplayName() + " left the game!");
+            redTeam.remove(player);
+            blueTeam.remove(player);
+            hitTypeData.remove(player.getDisplayName());
+            powerUps.remove(player.getDisplayName());
+            AdvancedParticleHandler.removeAdvancedParticleGenerator(player);
+            player.setScoreboard(scoreboardManager.getNewScoreboard());
+            giveBackPlayerInventory(player);
+        }
+    }
+
+    public void safeRemovePlayer(Player player){
+        if(currentState == GameStates.MATCH || numPlayers() - 1 <= 0){
+            messageAllPlayersInGame("Because " + player.getDisplayName() + " left the game, the game is cancelled!");
+            safeTerminateGame();
         } else {
             messageAllPlayersInGame(player.getDisplayName() + " left the game!");
             redTeam.remove(player);
@@ -186,6 +210,7 @@ public class SpikeBallGame {
                     }
                 }
                 savePlayerInventory(p);
+                readyUp.put(p.getDisplayName(), false);
                 setPlayerInventoryToGameMaterials(p, joinedRed);
                 setPowerUps(p);
                 if(joinedRed){
@@ -219,9 +244,17 @@ public class SpikeBallGame {
         switch (currentState){
             case MATCH:
                 if(spikeBall.getEntity() != null && spikeBall.isPlaying()) {
+                    Particle.DustOptions dust;
+                    if(redLastHit){
+                        dust = new Particle.DustOptions(Color.fromRGB(219, 37, 37), 2);
+                    } else {
+                        dust = new Particle.DustOptions(Color.fromRGB(35, 32, 230), 2);
+                    }
+                    spikeBall.getLocation().getWorld().spawnParticle(Particle.REDSTONE, spikeBall.getLocation(), 1, dust);
                     if (ifSpikeBallHitNet()) {
                         spikeBall.setVelocity(new Vector(spikeBall.getEntity().getVelocity().getX(), Math.abs(spikeBall.getEntity().getVelocity().getY()), spikeBall.getEntity().getVelocity().getZ()));
                         redLastHit = !redLastHit;
+                        hitCount = 0;
                         bounceCount++;
                         if(bounceCount >= 2){
                             bounceCount = 0;
@@ -229,6 +262,7 @@ public class SpikeBallGame {
                         }
                     } else if (!spikeBall.getEntity().getLocation().add(0, -SPIKE_BALL_GROUND_TOUCHING_TOLERANCE, 0).getBlock().getType().equals(Material.AIR)) {
                         updateScore();
+                        bounceCount = 0;
                     }
                 }
                 break;
@@ -253,6 +287,13 @@ public class SpikeBallGame {
                     } else if (!spikeBall.getEntity().getLocation().add(0, -SPIKE_BALL_GROUND_TOUCHING_TOLERANCE, 0).getBlock().getType().equals(Material.AIR)) {
                         updateScore();
                         bounceCount = 0;
+                    }
+                }
+                break;
+            case PRE_MATCH:
+                for(Player player : blueTeam){
+                    if(readyUp.get(player.getDisplayName())){
+
                     }
                 }
                 break;
@@ -401,12 +442,33 @@ public class SpikeBallGame {
         return spikeBallNet.toBlock().getBoundingBox().shift(0, 0.8, 0).expand(new Vector(0.2,0.1,0.2));
     }
 
-    public void terminateGame(){
+    //Does not remove cooldowns, so any reasons to shut down the game would not cause a ConcurrentModificationException
+    public void safeTerminateGame(){
         removeAllScoreboards();
         clearSpikeBall();
         giveAllPlayersBackInventories();
         shouldVisualize = false;
         SpikeBallGameHandler.removeGame(this);
+    }
+
+    public void terminateGame(){
+        removeAllScoreboards();
+        clearSpikeBall();
+        removeCooldowns();
+        giveAllPlayersBackInventories();
+        shouldVisualize = false;
+        removeAllPlayerAdvancedParticles();
+        SpikeBallGameHandler.removeGame(this);
+    }
+
+    public void removeCooldowns(){
+        for(Player player : redTeam){
+            CooldownHandler.removeCooldown(player);
+        }
+
+        for(Player player : blueTeam){
+            CooldownHandler.removeCooldown(player);
+        }
     }
 
     public void savePlayerInventory(Player player){
@@ -506,6 +568,16 @@ public class SpikeBallGame {
             redConcrete.setItemMeta(redConcreteMeta);
             player.getInventory().setItem(0, blueConcrete);
             player.getInventory().setItem(1, redConcrete);
+
+            ItemStack leaveClock = new ItemStack(Material.CLOCK, 1);
+            ItemMeta leaveClockMeta = leaveClock.getItemMeta();
+            leaveClockMeta.setDisplayName(ChatColor.RED + "Match Leaving Clock" + ChatColor.GRAY + " (Right Click)");
+            leaveClock.setItemMeta(leaveClockMeta);
+
+            player.getInventory().setItem(8, leaveClock);
+
+            setReadyItems(player);
+
         } else {
             if(ifRed){
                 ItemStack redConcrete = new ItemStack(Material.RED_CONCRETE, 1);
@@ -644,8 +716,10 @@ public class SpikeBallGame {
 
     public void givePowerUpsToPlayer(Player player){
         PowerUp[] powerUps = this.powerUps.get(player.getDisplayName());
-        for(int i = 0; i < powerUps.length; i++){
-            player.getInventory().setItem(i + 1, powerUps[i].getItemStack());
+        if(powerUps != null) {
+            for (int i = 0; i < powerUps.length; i++) {
+                player.getInventory().setItem(i + 1, powerUps[i].getItemStack());
+            }
         }
     }
 
@@ -660,4 +734,79 @@ public class SpikeBallGame {
     public PowerUp getLastUsedPowerUp(){
         return lastUsedPowerUp;
     }
+
+    public void makePlayerReady(Player player){
+        readyUp.put(player.getDisplayName(), true);
+        setReadyItems(player);
+        AdvancedParticleHandler.addAdvancedParticleGenerator(new AdvancedParticleGenerator(player,(t) -> {
+            Vector output = new Vector();
+            double a = 1;
+            double b = 2.0/5.0;
+            double h = 1.2;
+
+            output.setX((a + b)*Math.cos(t) - h*Math.cos((a + b)/b*t));
+            output.setY((a + b)*Math.sin(t) - h*Math.sin((a + b)/b*t));
+            output.setZ(0);
+            return output;
+        },0,12.6,10,0.1,Particle.VILLAGER_HAPPY, true));
+        if(areAllPlayersReady()){
+            isStartCancelled = false;
+            long startTime = System.currentTimeMillis();
+            long finishTime = startTime + 3000;
+            new BukkitRunnable(){
+                public void run() {
+                    long currentTime = System.currentTimeMillis();
+                    if(currentTime >= finishTime){
+                        startGame();
+                        isStartCancelled = true;
+                    } else {
+                        messageAllPlayersInGame("The game will begin in " + ChatColor.AQUA + (int) Math.ceil((finishTime - currentTime) / 1000.0) + ChatColor.GOLD + " seconds.");
+                    }
+                    if(isStartCancelled){
+                        cancel();
+                    }
+                }
+            }.runTaskTimer(SpikeBallMain.plugin,0L, 20L);
+        }
+    }
+
+    public void setReadyItems(Player player){
+        if(readyUp.containsKey(player.getDisplayName()) && !readyUp.get(player.getDisplayName())) {
+            ItemStack readyItem = new ItemStack(Material.RED_TERRACOTTA, 1);
+            ItemMeta readyItemMeta = readyItem.getItemMeta();
+            readyItemMeta.setDisplayName(ChatColor.RED + "You are not ready to start!" + ChatColor.GRAY + " (Right Click)");
+            readyItem.setItemMeta(readyItemMeta);
+
+            player.getInventory().setItem(7, readyItem);
+        } else {
+            ItemStack readyItem = new ItemStack(Material.GREEN_TERRACOTTA, 1);
+            ItemMeta readyItemMeta = readyItem.getItemMeta();
+            readyItemMeta.setDisplayName(ChatColor.GREEN + "You are ready to start!" + ChatColor.GRAY + " (Right Click)");
+            readyItem.setItemMeta(readyItemMeta);
+
+            player.getInventory().setItem(7, readyItem);
+        }
+    }
+
+    public void makePlayerNotReady(Player player){
+        readyUp.put(player.getDisplayName(), false);
+        setReadyItems(player);
+        isStartCancelled = true;
+        AdvancedParticleHandler.removeAdvancedParticleGenerator(player);
+    }
+
+    public boolean areAllPlayersReady(){
+        return !readyUp.containsValue(false);
+    }
+
+    public void removeAllPlayerAdvancedParticles(){
+        for(Player player : blueTeam){
+            AdvancedParticleHandler.removeAdvancedParticleGenerator(player);
+        }
+
+        for(Player player : redTeam){
+            AdvancedParticleHandler.removeAdvancedParticleGenerator(player);
+        }
+    }
+
 }

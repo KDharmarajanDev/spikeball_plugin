@@ -2,6 +2,7 @@ package Mathematician.spikeball.gamemechanics;
 
 import Mathematician.spikeball.SpikeBallMain;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
+import Mathematician.spikeball.gamemechanics.powerups.Cooldown;
 import Mathematician.spikeball.gamemechanics.powerups.CooldownHandler;
 import Mathematician.spikeball.gamemechanics.powerups.Freeze;
 import Mathematician.spikeball.gamemechanics.powerups.PowerUp;
@@ -55,7 +56,11 @@ public class GameEventHandler implements Listener {
 
             } else {
                 if(event.getItem() != null && event.getItem().isSimilar(tool)){
-                    SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet(block));
+                    SpikeBallNet addingSpikeBallNet = new SpikeBallNet(block);
+                    if(!SpikeBallGameHandler.containsSpikeBallNet(addingSpikeBallNet)) {
+                        SpikeBallMain.saveNet(block.getLocation());
+                        SpikeBallGameHandler.addSpikeBallNet(addingSpikeBallNet);
+                    }
                     SpikeBallMain.sendPluginMessage(player, "This is now a valid Spike Ball Net.");
                 }
             }
@@ -63,8 +68,26 @@ public class GameEventHandler implements Listener {
             SpikeBallGame playerSpikeBallGame = SpikeBallGameHandler.getGamePlayerIsIn(player);
             if(playerSpikeBallGame != null && !playerSpikeBallGame.isInProgress()){
                 ItemStack item = event.getItem();
-                if(item.getType().equals(Material.RED_CONCRETE) || item.getType().equals(Material.BLUE_CONCRETE)){
-                    playerSpikeBallGame.switchTeams(player,item.getType().equals(Material.RED_CONCRETE));
+                if(item != null) {
+                    if (item.getType().equals(Material.RED_CONCRETE) || item.getType().equals(Material.BLUE_CONCRETE)) {
+                        playerSpikeBallGame.switchTeams(player, item.getType().equals(Material.RED_CONCRETE));
+                    } else if (item.getType().equals(Material.CLOCK)) {
+                        if (!CooldownHandler.containsCooldown(player.getDisplayName() + " Leave Clock")) {
+
+                            CooldownHandler.addCooldown(new Cooldown(player.getDisplayName() + " Leave Clock", 3000, input -> {
+                                playerSpikeBallGame.safeRemovePlayer(player);
+                            }));
+
+                            SpikeBallMain.sendPluginMessage(player, "You will be leaving this game in 3 seconds. Right-click to cancel.");
+                        } else {
+                            SpikeBallMain.sendPluginMessage(player, "You have cancelled leaving.");
+                            CooldownHandler.removeCooldown(player);
+                        }
+                    } else if(item.getType().equals(Material.RED_TERRACOTTA)){
+                        playerSpikeBallGame.makePlayerReady(player);
+                    } else if(item.getType().equals(Material.GREEN_TERRACOTTA)){
+                        playerSpikeBallGame.makePlayerNotReady(player);
+                    }
                 }
             }
         }
@@ -128,7 +151,7 @@ public class GameEventHandler implements Listener {
 
                 switch (hitType){
                     case SPIKING:
-                        spikeBallGame.addVelocityToSpikeBall(playerDirection.normalize().multiply(1.5));
+                        spikeBallGame.addVelocityToSpikeBall(playerDirection.normalize());
                         break;
 
                     case UP:
