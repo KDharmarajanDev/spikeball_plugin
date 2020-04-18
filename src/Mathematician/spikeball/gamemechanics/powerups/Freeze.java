@@ -55,7 +55,7 @@ public class Freeze implements PowerUp {
                         }
                     }
                 }.runTaskTimer(SpikeBallMain.plugin,0L,1L);
-                CooldownHandler.addCooldown(this,20000);
+                CooldownHandler.addPowerUpCooldown(this,20000);
                 spikeBallGame.setLastUsedPowerUp(this);
                 return true;
             }
