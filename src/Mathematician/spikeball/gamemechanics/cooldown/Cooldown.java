@@ -1,4 +1,4 @@
-package Mathematician.spikeball.gamemechanics.powerups;
+package Mathematician.spikeball.gamemechanics.cooldown;
 
 import java.util.function.Consumer;
 
