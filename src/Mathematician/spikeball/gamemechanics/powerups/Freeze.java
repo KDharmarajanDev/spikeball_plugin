@@ -2,7 +2,8 @@ package Mathematician.spikeball.gamemechanics.powerups;
 
 import Mathematician.spikeball.SpikeBallMain;
 import Mathematician.spikeball.gameelements.SpikeBall;
-import Mathematician.spikeball.gamemechanics.SpikeBallGame;
+import Mathematician.spikeball.game.SpikeBallGame;
+import Mathematician.spikeball.gamemechanics.cooldown.CooldownHandler;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;

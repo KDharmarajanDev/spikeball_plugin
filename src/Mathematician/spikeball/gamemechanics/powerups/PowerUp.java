@@ -1,6 +1,6 @@
 package Mathematician.spikeball.gamemechanics.powerups;
 
-import Mathematician.spikeball.gamemechanics.SpikeBallGame;
+import Mathematician.spikeball.game.SpikeBallGame;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 

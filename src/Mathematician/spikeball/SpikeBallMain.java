@@ -1,41 +1,56 @@
 package Mathematician.spikeball;
 
-import Mathematician.spikeball.advancedparticles.AdvancedParticleGenerator;
 import Mathematician.spikeball.advancedparticles.AdvancedParticleHandler;
-import Mathematician.spikeball.gameelements.SpikeBall;
+import Mathematician.spikeball.commands.CommandHandler;
 import Mathematician.spikeball.gameelements.SpikeBallNet;
-import Mathematician.spikeball.gamemechanics.GameEventHandler;
-import Mathematician.spikeball.gamemechanics.SpikeBallGameHandler;
-import Mathematician.spikeball.gamemechanics.powerups.CooldownHandler;
+import Mathematician.spikeball.gameevents.*;
+import Mathematician.spikeball.game.SpikeBallGameHandler;
+import Mathematician.spikeball.gamemechanics.cooldown.CooldownHandler;
+import net.minecraft.server.v1_15_R1.NBTTagCompound;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_15_R1.inventory.CraftItemStack;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class SpikeBallMain extends JavaPlugin {
 
     private CommandHandler commandHandler = new CommandHandler();
-    public static JavaPlugin plugin;
-    private static String pluginInformationString = ChatColor.DARK_GREEN + "[" + ChatColor.GOLD + "Spike Ball" + ChatColor.DARK_GREEN + "]" +ChatColor.DARK_GRAY +" » " + ChatColor.GOLD;
+    public static SpikeBallMain plugin;
+    private static String pluginInformationString = ChatColor.DARK_GREEN + "[" + ChatColor.GOLD + "Spike Ball" + ChatColor.DARK_GREEN + "]" + ChatColor.DARK_GRAY + " » " + ChatColor.GOLD;
     public static BukkitScheduler scheduler;
-    public static int numSpikeBallNets = 0;
 
     @Override
-    public void onEnable(){
+    public void onEnable() {
         //Initial Information
         plugin = this;
         getLogger().info("Running Spike Ball Plugin!");
 
         //Events Registering
-        getServer().getPluginManager().registerEvents(new GameEventHandler(), this);
+        getServer().getPluginManager().registerEvents(new GameMechanicEvent(), this);
+        getServer().getPluginManager().registerEvents(new HitSpikeBallEvent(), this);
+        getServer().getPluginManager().registerEvents(new JoiningGameEvent(), this);
+        getServer().getPluginManager().registerEvents(new PlayerHandlingEvents(), this);
+        getServer().getPluginManager().registerEvents(new PreMatchItemHandlingEvent(), this);
+        getServer().getPluginManager().registerEvents(new SpikeBallHandlingEvents(), this);
+        getServer().getPluginManager().registerEvents(new SpikeBallNetPlaceEvent(), this);
 
         //Command Registering
         getCommand("spikeball").setExecutor(new CommandHandler());
 
         scheduler = getServer().getScheduler();
         plugin = this;
+        loadConfiguration();
+        loadNets();
         scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {
@@ -44,39 +59,70 @@ public class SpikeBallMain extends JavaPlugin {
                 AdvancedParticleHandler.update();
             }
         }, 0L, 1L);
-        loadConfiguration();
-        loadNets();
     }
 
-    public void loadConfiguration() {
-        getConfig().options().copyDefaults(true);
-        saveConfig();
+    public static void loadConfiguration() {
+        if (!plugin.getConfig().contains("Spike Ball")) {
+            plugin.getConfig().options().copyDefaults(true);
+        }
+        plugin.saveConfig();
     }
 
-    public void loadNets(){
-        numSpikeBallNets = getConfig().getInt("Spike Ball.Number of Nets");
-        if(numSpikeBallNets >= 0){
-            for(int i = 0; i < numSpikeBallNets; i++){
-                Location location = getConfig().getLocation("Spike Ball.Net Locations." + i);
-                if(location != null){
-                    if(location.getBlock().getType().equals(Material.SCAFFOLDING)) {
-                        SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet(location.getBlock()));
+    public static void loadNets() {
+        boolean ifUsingTexturePack = plugin.getConfig().getBoolean("Spike Ball.Using Texture Pack");
+        SpikeBallNet.ifUsingTexturePack = ifUsingTexturePack;
+        List<Location> netLocations = (List<Location>) plugin.getConfig().getList("Spike Ball.Net Locations");
+        if(netLocations != null) {
+            for (Location location : netLocations) {
+                if (location != null) {
+                    if (!ifUsingTexturePack) {
+                        if (location.getBlock().getType().equals(Material.SCAFFOLDING)) {
+                            SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet(location.getBlock()));
+                        } else {
+                            plugin.getLogger().info("There is no Scaffolding Block at " + location.toString());
+                        }
                     } else {
-                        getLogger().info("There is no Scaffolding Block at " + location.toString());
+                        Collection<Entity> entities = location.getWorld().getNearbyEntities(location, 1, 1, 1);
+                        for (Entity e : entities) {
+                            if (e instanceof ArmorStand) {
+                                ArmorStand armorStand = (ArmorStand) e;
+                                ItemStack helmet = armorStand.getHelmet();
+                                if (helmet != null) {
+                                    net.minecraft.server.v1_15_R1.ItemStack nmsStack = CraftItemStack.asNMSCopy(helmet);
+                                    NBTTagCompound compound = (nmsStack.hasTag()) ? nmsStack.getTag() : new NBTTagCompound();
+                                    int customModelDataNumber = compound.getInt("CustomModelData");
+                                    if (customModelDataNumber == 150000) {
+                                        SpikeBallGameHandler.addSpikeBallNet(new SpikeBallNet((ArmorStand) e));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
                 } else {
-                    getLogger().info("Net Location " + i + " doesn't exist!");
+                    plugin.getLogger().info("Net Location " + location.toString() + " doesn't exist!");
                 }
             }
-        } else {
-            getLogger().info("Number of Spike Ball Nets is a Negative Number!");
         }
     }
 
     public static void saveNet(Location location){
-        plugin.getConfig().set("Spike Ball.Net Locations." + (numSpikeBallNets),location);
-        numSpikeBallNets++;
+        List<Location> netLocations = (List<Location>) plugin.getConfig().getList("Spike Ball.Net Locations");
+        if(netLocations == null){
+            netLocations = new ArrayList<>();
+        }
+        netLocations.add(location);
+        plugin.getConfig().set("Spike Ball.Net Locations", netLocations);
         plugin.saveConfig();
+    }
+
+    public static void deleteNet(Location location){
+        List<Location> netLocations = (List<Location>) plugin.getConfig().getList("Spike Ball.Net Locations");
+        if(netLocations != null) {
+            netLocations.remove(location);
+            plugin.getConfig().set("Spike Ball.Net Locations", netLocations);
+            plugin.saveConfig();
+        }
     }
 
     @Override

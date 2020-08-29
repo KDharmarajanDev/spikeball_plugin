@@ -1,9 +1,10 @@
 package Mathematician.spikeball.gamemechanics.powerups;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
+import Mathematician.spikeball.gamemechanics.cooldown.Cooldown;
 
-public class PowerUpCooldown extends Cooldown{
+import java.util.function.Consumer;
+
+public class PowerUpCooldown extends Cooldown {
 
     private PowerUp powerUp;
 

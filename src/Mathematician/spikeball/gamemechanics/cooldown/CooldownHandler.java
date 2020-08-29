@@ -1,6 +1,8 @@
-package Mathematician.spikeball.gamemechanics.powerups;
+package Mathematician.spikeball.gamemechanics.cooldown;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
+import Mathematician.spikeball.gamemechanics.cooldown.Cooldown;
+import Mathematician.spikeball.gamemechanics.powerups.PowerUp;
+import Mathematician.spikeball.gamemechanics.powerups.PowerUpCooldown;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
